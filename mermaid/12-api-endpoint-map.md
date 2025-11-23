@@ -1,0 +1,117 @@
+# API Endpoint Map
+
+```mermaid
+graph TB
+    subgraph "Authentication Endpoints"
+        AUTH[/api/v1/auth]
+        REG[POST /auth/register]
+        LOG[POST /auth/login]
+        LOGOUT[POST /auth/logout]
+        REFRESH[POST /auth/refresh]
+        OAUTH[POST /auth/oauth/{provider}]
+        OAUTH_CB[GET /auth/oauth/{provider}/callback]
+    end
+
+    subgraph "User Endpoints"
+        USER[/api/v1/users]
+        PROFILE[GET/PUT /users/me]
+        STATS[GET /users/me/stats]
+    end
+
+    subgraph "Model Endpoints"
+        MODEL[/api/v1/models]
+        UPLOAD[POST /models/upload]
+        LIST[GET /models]
+        GET_MODEL[GET /models/{model_id}]
+        UPDATE[PUT /models/{model_id}]
+        DELETE[DELETE /models/{model_id}]
+        VERSIONS[GET /models/{model_id}/versions]
+        DOWNLOAD[GET /models/{model_id}/download]
+    end
+
+    subgraph "Prediction Endpoints"
+        PRED[/api/v1/predictions]
+        PREDICT[POST /predict/{model_id}]
+        HISTORY[GET /predictions/history]
+        GET_PRED[GET /predictions/{prediction_id}]
+        ANALYTICS[GET /predictions/analytics]
+    end
+
+    subgraph "Sharing Endpoints"
+        SHARE[/api/v1/shares]
+        SHARE_MODEL[POST /shares/models/{model_id}]
+        LIST_SHARED[GET /shares/shared-with-me]
+        UPDATE_PERM[PUT /shares/{share_id}]
+        REMOVE_SHARE[DELETE /shares/{share_id}]
+    end
+
+    subgraph "API Key Endpoints"
+        APIKEY[/api/v1/api-keys]
+        CREATE_KEY[POST /api-keys]
+        LIST_KEYS[GET /api-keys]
+        REVOKE[DELETE /api-keys/{key_id}]
+        ROTATE[POST /api-keys/{key_id}/rotate]
+    end
+
+    subgraph "Webhook Endpoints"
+        WEBHOOK[/api/v1/webhooks]
+        CREATE_WH[POST /webhooks]
+        LIST_WH[GET /webhooks]
+        UPDATE_WH[PUT /webhooks/{webhook_id}]
+        DELETE_WH[DELETE /webhooks/{webhook_id}]
+        TEST_WH[POST /webhooks/{webhook_id}/test]
+    end
+
+    subgraph "Health & Monitoring"
+        HEALTH[/health]
+        READY[/ready]
+        METRICS[/metrics]
+    end
+
+    AUTH --> REG
+    AUTH --> LOG
+    AUTH --> LOGOUT
+    AUTH --> REFRESH
+    AUTH --> OAUTH
+    AUTH --> OAUTH_CB
+
+    USER --> PROFILE
+    USER --> STATS
+
+    MODEL --> UPLOAD
+    MODEL --> LIST
+    MODEL --> GET_MODEL
+    MODEL --> UPDATE
+    MODEL --> DELETE
+    MODEL --> VERSIONS
+    MODEL --> DOWNLOAD
+
+    PRED --> PREDICT
+    PRED --> HISTORY
+    PRED --> GET_PRED
+    PRED --> ANALYTICS
+
+    SHARE --> SHARE_MODEL
+    SHARE --> LIST_SHARED
+    SHARE --> UPDATE_PERM
+    SHARE --> REMOVE_SHARE
+
+    APIKEY --> CREATE_KEY
+    APIKEY --> LIST_KEYS
+    APIKEY --> REVOKE
+    APIKEY --> ROTATE
+
+    WEBHOOK --> CREATE_WH
+    WEBHOOK --> LIST_WH
+    WEBHOOK --> UPDATE_WH
+    WEBHOOK --> DELETE_WH
+    WEBHOOK --> TEST_WH
+
+    style AUTH fill:#61dafb,stroke:#333,stroke-width:2px,color:#000
+    style PRED fill:#ffd700,stroke:#333,stroke-width:2px,color:#000
+    style MODEL fill:#90EE90,stroke:#333,stroke-width:2px,color:#000
+    style SHARE fill:#ff69b4,stroke:#333,stroke-width:2px,color:#000
+    style APIKEY fill:#9370db,stroke:#333,stroke-width:2px,color:#fff
+    style WEBHOOK fill:#ff6347,stroke:#333,stroke-width:2px,color:#fff
+    style HEALTH fill:#a9a9a9,stroke:#333,stroke-width:2px,color:#fff
+```

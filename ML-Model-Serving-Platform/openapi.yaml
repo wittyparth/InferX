@@ -1,0 +1,717 @@
+openapi: 3.0.0
+info:
+  title: ML Model Serving Platform
+  description: |
+    # ML Model Serving Platform API
+
+    A production-ready platform for deploying, managing, and serving machine learning models via REST API.
+
+    ## Key Features
+
+    - **Model Management**: Upload, version, and manage ML models
+    - **Authentication**: JWT + API Key authentication with refresh tokens
+    - **Predictions**: Real-time predictions with caching and performance tracking
+    - **Sharing**: Share models with other users with granular permissions
+    - **Analytics**: Track model performance and usage metrics
+    - **Webhooks**: Event-driven architecture with webhook support
+    - **Rate Limiting**: Per-user rate limiting with Redis backend
+    - **Health Checks**: Kubernetes-ready health check endpoints
+
+    ## Getting Started
+
+    1. **Register**: `POST /api/v1/auth/register`
+    2. **Login**: `POST /api/v1/auth/login`
+    3. **Upload Model**: `POST /api/v1/models/upload`
+    4. **Make Prediction**: `POST /api/v1/predictions/predict`
+
+  version: "1.0.0"
+  contact:
+    name: API Support
+    email: support@example.com
+  license:
+    name: MIT
+
+servers:
+  - url: "https://api.example.com"
+    description: Production server
+  - url: "http://localhost:8000"
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User registration, login, and token management
+  - name: Models
+    description: ML model upload, versioning, and management
+  - name: Predictions
+    description: Real-time model predictions with caching
+  - name: Model Sharing
+    description: Share models with other users and manage permissions
+  - name: API Keys
+    description: Create and manage API keys for authentication
+  - name: Analytics
+    description: Track model performance and usage metrics
+  - name: Webhooks
+    description: Configure webhooks for event notifications
+  - name: Health
+    description: System health and readiness checks
+  - name: Users
+    description: User profile and account management
+
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: Register a new user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  example: secure_password
+                full_name:
+                  type: string
+                  example: John Doe
+      responses:
+        "201":
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  email:
+                    type: string
+                  full_name:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+
+  /api/v1/auth/login:
+    post:
+      summary: Login user
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  refresh_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: bearer
+                  expires_in:
+                    type: integer
+
+  /api/v1/auth/refresh:
+    post:
+      summary: Refresh access token
+      tags:
+        - Authentication
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: New access token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+
+  /api/v1/auth/me:
+    get:
+      summary: Get current user
+      tags:
+        - Authentication
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: Current user details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  email:
+                    type: string
+                  full_name:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+
+  /api/v1/models/upload:
+    post:
+      summary: Upload a new ML model
+      tags:
+        - Models
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - model_file
+                - model_name
+              properties:
+                model_file:
+                  type: string
+                  format: binary
+                model_name:
+                  type: string
+                model_type:
+                  type: string
+                  enum:
+                    - sklearn
+                    - tensorflow
+                    - pytorch
+                description:
+                  type: string
+                version_note:
+                  type: string
+      responses:
+        "201":
+          description: Model uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_id:
+                    type: string
+                  model_name:
+                    type: string
+                  version:
+                    type: integer
+                  model_type:
+                    type: string
+                  status:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+
+  /api/v1/models:
+    get:
+      summary: List user's models
+      tags:
+        - Models
+      security:
+        - BearerToken: []
+      parameters:
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - deprecated
+              - archived
+      responses:
+        "200":
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  skip:
+                    type: integer
+                  limit:
+                    type: integer
+
+  /api/v1/models/{model_id}:
+    get:
+      summary: Get model details
+      tags:
+        - Models
+      security:
+        - BearerToken: []
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Model details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model_id:
+                    type: string
+                  model_name:
+                    type: string
+                  version:
+                    type: integer
+                  status:
+                    type: string
+
+    patch:
+      summary: Update model metadata
+      tags:
+        - Models
+      security:
+        - BearerToken: []
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                description:
+                  type: string
+                status:
+                  type: string
+                metadata:
+                  type: object
+      responses:
+        "200":
+          description: Model updated
+
+    delete:
+      summary: Delete model
+      tags:
+        - Models
+      security:
+        - BearerToken: []
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Model deleted
+
+  /api/v1/predictions/predict:
+    post:
+      summary: Make a prediction
+      tags:
+        - Predictions
+      security:
+        - BearerToken: []
+        - ApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - model_id
+                - features
+              properties:
+                model_id:
+                  type: string
+                features:
+                  type: array
+                  items:
+                    type: number
+      responses:
+        "200":
+          description: Prediction successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prediction:
+                    oneOf:
+                      - type: string
+                      - type: number
+                  probability:
+                    type: number
+                  confidence_score:
+                    type: number
+                  inference_time_ms:
+                    type: number
+                  cache_hit:
+                    type: boolean
+
+  /api/v1/predictions/history/{model_id}:
+    get:
+      summary: Get prediction history
+      tags:
+        - Predictions
+      security:
+        - BearerToken: []
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: skip
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Prediction history
+
+  /api/v1/predictions/analytics/{model_id}:
+    get:
+      summary: Get model analytics
+      tags:
+        - Analytics
+      security:
+        - BearerToken: []
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: days
+          in: query
+          schema:
+            type: integer
+            default: 7
+      responses:
+        "200":
+          description: Model analytics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_predictions:
+                    type: integer
+                  success_rate:
+                    type: number
+                  average_inference_time_ms:
+                    type: number
+                  cache_hit_rate:
+                    type: number
+
+  /api/v1/model-shares/share:
+    post:
+      summary: Share model with user
+      tags:
+        - Model Sharing
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - model_id
+                - shared_with_email
+              properties:
+                model_id:
+                  type: string
+                shared_with_email:
+                  type: string
+                permissions:
+                  type: array
+                  items:
+                    type: string
+                    enum:
+                      - view
+                      - use
+                      - edit
+      responses:
+        "201":
+          description: Model shared successfully
+
+  /api/v1/model-shares/shared-with-me:
+    get:
+      summary: List models shared with me
+      tags:
+        - Model Sharing
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: List of shared models
+
+  /api/v1/api-keys/create:
+    post:
+      summary: Create new API key
+      tags:
+        - API Keys
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                expires_in_days:
+                  type: integer
+                permissions:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "201":
+          description: API key created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key_id:
+                    type: string
+                  name:
+                    type: string
+                  key:
+                    type: string
+                    description: "Only shown once - store securely"
+                  created_at:
+                    type: string
+
+  /api/v1/api-keys/list:
+    get:
+      summary: List API keys
+      tags:
+        - API Keys
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: List of API keys
+
+  /api/v1/webhooks/create:
+    post:
+      summary: Create webhook
+      tags:
+        - Webhooks
+      security:
+        - BearerToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+                - events
+              properties:
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: array
+                  items:
+                    type: string
+                model_id:
+                  type: string
+                active:
+                  type: boolean
+      responses:
+        "201":
+          description: Webhook created
+
+  /api/v1/webhooks/list:
+    get:
+      summary: List webhooks
+      tags:
+        - Webhooks
+      security:
+        - BearerToken: []
+      responses:
+        "200":
+          description: List of webhooks
+
+  /api/v1/webhooks/{webhook_id}/test:
+    post:
+      summary: Test webhook
+      tags:
+        - Webhooks
+      security:
+        - BearerToken: []
+      parameters:
+        - name: webhook_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Webhook test result
+
+  /api/v1/health:
+    get:
+      summary: Detailed health check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  database:
+                    type: object
+                  cache:
+                    type: object
+
+  /api/v1/ready:
+    get:
+      summary: Readiness check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is ready
+
+  /api/v1/live:
+    get:
+      summary: Liveness check
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is alive
+
+components:
+  securitySchemes:
+    BearerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token from /auth/login
+
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key from /api-keys/create
+
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string
+
+    RateLimitError:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              detail:
+                type: string

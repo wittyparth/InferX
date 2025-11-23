@@ -1,0 +1,110 @@
+services:
+  # ========== PostgreSQL Database ==========
+  postgres:
+    image: postgres:15-alpine
+    container_name: ml_platform_db
+    environment:
+      POSTGRES_USER: mluser
+      POSTGRES_PASSWORD: mlpassword
+      POSTGRES_DB: ml_platform
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mluser -d ml_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ml_network
+
+  # ========== Redis Cache ==========
+  redis:
+    image: redis:7-alpine
+    container_name: ml_platform_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ml_network
+
+  # ========== FastAPI Backend ==========
+  backend:
+    build:
+      context: ./ML-Model-Serving-Platform
+      dockerfile: Dockerfile
+      target: development
+    container_name: ml_platform_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot reload
+      - ./ML-Model-Serving-Platform:/app
+      # Exclude unnecessary directories
+      - /app/__pycache__
+      - /app/.pytest_cache
+      - /app/.venv
+      - /app/htmlcov
+    environment:
+      - DATABASE_URL=postgresql://mluser:mlpassword@postgres:5432/ml_platform
+      - REDIS_URL=redis://redis:6379
+      - PYTHONUNBUFFERED=1
+      - NODE_ENV=development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ml_network
+    # Restart policy for development
+    restart: unless-stopped
+
+  # ========== Next.js Frontend ==========
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: ml_platform_frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./Frontend:/app
+      # Keep container's node_modules (don't overwrite it)
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - NODE_ENV=development
+      # Windows file watching for hot reload
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      # Client-side API URL (browser) - use localhost
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      # Server-side API URL (Next.js API routes) - use Docker network
+      - BACKEND_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - ml_network
+    # Restart policy for development
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  ml_network:
+    driver: bridge
