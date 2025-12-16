@@ -1,50 +1,50 @@
 # FastAPI and Server
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+fastapi
+uvicorn[standard]
+python-multipart
 
 # Database
-sqlalchemy==2.0.23
-psycopg2-binary==2.9.9
-alembic==1.12.1
+sqlalchemy
+psycopg2-binary
+alembic
 
 # Redis
-redis==5.0.1
+redis
 
 # Authentication & Security
-python-jose[cryptography]==3.3.0
-passlib[argon2]==1.7.4
-argon2-cffi==23.1.0
-pydantic[email]==2.5.0
-pydantic-settings==2.1.0
-authlib==1.3.0
-httpx==0.25.2
-itsdangerous==2.1.2
+python-jose[cryptography]
+passlib[argon2]
+argon2-cffi
+pydantic[email]
+pydantic-settings
+authlib
+httpx
+itsdangerous
 
 # ML Libraries
-scikit-learn==1.3.2
-joblib==1.3.2
-numpy==1.26.2
+scikit-learn
+joblib
+numpy
 
 # Utilities
-python-dotenv==1.0.0
-aiofiles==23.2.1
+python-dotenv
+aiofiles
 
 # Cloud Storage
-boto3==1.34.10
-botocore==1.34.10
+boto3
+botocore
 
 # Monitoring & Error Tracking
-sentry-sdk[fastapi]==1.40.0
+sentry-sdk[fastapi]
 
 # Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-httpx==0.25.2
-requests==2.31.0
+pytest
+pytest-asyncio
+pytest-cov
+# httpxs
+requests
 
 # Development
-black==23.11.0
-flake8==6.1.0
-mypy==1.7.1
+black
+flake8
+mypy

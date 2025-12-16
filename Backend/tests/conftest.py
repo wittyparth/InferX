@@ -2,6 +2,8 @@
 
 import os
 import tempfile
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 from fastapi.testclient import TestClient
@@ -17,7 +19,11 @@ from app.models.user import User
 
 # Use PostgreSQL test database (same as dev)
 # Note: The database service is named 'postgres' in docker-compose
-SQLALCHEMY_DATABASE_URL = "postgresql://mluser:mlpassword@postgres:5432/ml_platform"
+SQLALCHEMY_DATABASE_URL = (
+    "postgresql://postgres:Parthu12345%40@127.0.0.1:5432/inferx_test"
+)
+
+
 
 # Create engine with connection pool settings for tests
 engine = create_engine(

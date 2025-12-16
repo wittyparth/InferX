@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+import re
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 # Request Schemas
 
@@ -21,6 +22,12 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = Field(
         None, max_length=255, description="User's full name"
     )
+    @field_validator("password")
+    def password_strength(cls, value):
+        pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\w\s]).{8,}$'
+        if re.fullmatch(pattern, value.strip()) is None:
+            raise ValueError("Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character.")
+        return value
 
 
 class UserLogin(BaseModel):
@@ -28,7 +35,7 @@ class UserLogin(BaseModel):
 
     email: EmailStr
     password: str
-
+    
 
 class UserUpdate(BaseModel):
     """Schema for updating user profile"""
