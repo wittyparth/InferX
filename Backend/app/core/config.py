@@ -49,6 +49,7 @@ class Settings(BaseSettings):
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
+    UPSTASH_REDIS_REST_TOKEN: Optional[str] = None  # For Upstash Redis
     CACHE_TTL_SECONDS: int = 3600  # 1 hour
 
     # CORS

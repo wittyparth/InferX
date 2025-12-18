@@ -1,8 +1,10 @@
-"""
+""" 
 Prediction endpoints
 Handles real-time and batch predictions
 """
 
+import io
+import joblib
 import logging
 import time
 from datetime import datetime
@@ -21,6 +23,7 @@ from app.models.model import Model
 from app.models.prediction import Prediction
 from app.models.user import User
 from app.schemas.prediction import PredictionInput
+from app.core.storage import StorageService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/predict", tags=["Predictions"])
@@ -100,8 +103,11 @@ async def predict(
         )
 
     try:
-        # Load model from disk/cache
-        model = loader.load_model(model_record.file_path, str(model_record.id))
+        # Load model using ModelLoader (handles caching + S3/local storage)
+        model = await loader.load_model(
+            file_path=model_record.file_path,
+            model_id=str(model_record.id)
+        )
 
         # Prepare input data
         input_data = prediction_input.input

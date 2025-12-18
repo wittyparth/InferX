@@ -3,12 +3,15 @@ Model Loading and Caching Service
 Handles loading ML models from disk and caching them in memory
 """
 
+import io
 import logging
 import pickle
 from pathlib import Path
 from typing import Any
 
 import joblib
+
+from app.core.storage import StorageService
 
 logger = logging.getLogger(__name__)
 
@@ -25,13 +28,14 @@ class ModelLoader:
         """
         self.cache_size = cache_size
         self._cache: dict[str, Any] = {}
+        self.storage = StorageService()  # Storage abstraction for S3/local
 
-    def load_model(self, file_path: str, model_id: str) -> Any:
+    async def load_model(self, file_path: str, model_id: str) -> Any:
         """
-        Load a model from disk (with LRU caching)
+        Load a model from storage (with LRU caching)
 
         Args:
-            file_path: Path to model file
+            file_path: Storage key or path to model file
             model_id: Unique model identifier for caching
 
         Returns:
@@ -46,25 +50,22 @@ class ModelLoader:
             logger.info(f"Model {model_id} loaded from cache")
             return self._cache[model_id]
 
-        # Load from disk
+        # Load from storage (S3 or local)
         try:
-            model_path = Path(file_path)
-
-            if not model_path.exists():
-                raise FileNotFoundError(f"Model file not found: {file_path}")
+            # Load model bytes from storage
+            model_bytes = await self.storage.load_file(file_path)
 
             # Try loading with joblib first, then pickle as fallback
             try:
-                model = joblib.load(file_path)
-                logger.info(f"Model loaded with joblib: {file_path}")
+                model = joblib.load(io.BytesIO(model_bytes))
+                logger.info(f"Model loaded with joblib from storage: {file_path}")
             except Exception as joblib_error:
                 logger.warning(
                     f"Joblib load failed, trying pickle: {str(joblib_error)}"
                 )
                 try:
-                    with open(file_path, "rb") as f:
-                        model = pickle.load(f)
-                    logger.info(f"Model loaded with pickle: {file_path}")
+                    model = pickle.loads(model_bytes)
+                    logger.info(f"Model loaded with pickle from storage: {file_path}")
                 except Exception as pickle_error:
                     raise Exception(
                         f"Failed to load model with both joblib and pickle. Joblib: {str(joblib_error)}, Pickle: {str(pickle_error)}"

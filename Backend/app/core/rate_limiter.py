@@ -95,10 +95,9 @@ def get_rate_limiter() -> RateLimiter:
 
     if _rate_limiter is None:
         try:
-            redis_client = redis.Redis(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                db=0,
+            # Connect using REDIS_URL (supports both standard Redis and Upstash)
+            redis_client = redis.from_url(
+                settings.REDIS_URL,
                 decode_responses=False,
             )
             _rate_limiter = RateLimiter(redis_client)

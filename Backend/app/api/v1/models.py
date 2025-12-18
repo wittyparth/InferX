@@ -19,8 +19,11 @@ from app.models.model import Model
 from app.models.prediction import Prediction
 from app.models.user import User
 from app.schemas.model import ModelListResponse, ModelResponse, ModelUpdate
+from app.core.storage import StorageService
 
 router = APIRouter(prefix="/models", tags=["Models"])
+
+storage = StorageService()
 
 
 @router.post("/upload", response_model=dict, status_code=status.HTTP_201_CREATED)
@@ -72,18 +75,15 @@ async def upload_model(
 
     version = 1 if not latest_model else latest_model.version + 1
 
-    # Create file path
+    # Generate unique model ID and storage key
     model_id = str(uuid_lib.uuid4())
-    file_dir = os.path.join(
-        settings.UPLOAD_DIR, str(current_user.id), name, f"v{version}"
-    )
-    os.makedirs(file_dir, exist_ok=True)
-
-    file_path = os.path.join(file_dir, file.filename or "model.pkl")
-
-    # Save file
-    with open(file_path, "wb") as f:
-        f.write(content)
+    storage_key = f"{current_user.id}/{name}/v{version}/{file.filename or 'model.pkl'}"
+    
+    # Save file to storage (S3 or local based on USE_CLOUD_STORAGE setting)
+    await storage.save_file(storage_key, content)
+    
+    # Store the storage key (not the returned URL) for consistent retrieval
+    file_path = storage_key
 
     # Create model record
     new_model = Model(
