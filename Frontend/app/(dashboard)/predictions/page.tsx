@@ -4,12 +4,13 @@ import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Download, Loader2, RefreshCw, Filter } from "lucide-react"
+import { Download, RefreshCw, Filter, TrendingUp, Clock, CheckCircle2, XCircle } from "lucide-react"
 import { DataTable } from "@/components/data-table"
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table"
 import { api } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
 import { Card } from "@/components/ui/card"
+import { TableRowSkeleton } from "@/components/loading-skeleton"
 
 interface Prediction {
   id: string
@@ -196,52 +197,93 @@ export default function PredictionsPage() {
       </motion.div>
 
       {/* Filters */}
-      <Card className="card-base p-4">
-        <div className="flex items-center gap-4">
-          <Filter className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground dark:text-muted-foreground">Filter by model:</span>
-            <select
-              value={modelFilter || ""}
-              onChange={(e) => {
-                setModelFilter(e.target.value || undefined)
-                setPage(1)
-              }}
-              className="px-3 py-1.5 bg-input dark:bg-input border border-border dark:border-border rounded-md text-sm text-foreground dark:text-foreground"
-            >
-              <option value="">All Models</option>
-              {models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="card-base p-5 border-border/50">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+              <Filter className="w-5 h-5 text-primary" />
+            </div>
+            <div className="flex-1 flex items-center gap-3">
+              <label className="text-sm font-medium text-foreground">Filter by model:</label>
+              <select
+                value={modelFilter || ""}
+                onChange={(e) => {
+                  setModelFilter(e.target.value || undefined)
+                  setPage(1)
+                }}
+                className="px-4 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+              >
+                <option value="">All Models</option>
+                {models.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </motion.div>
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="space-y-4"
+        >
+          <TableRowSkeleton count={8} />
+        </motion.div>
       )}
 
       {/* Empty State */}
       {!isLoading && predictions.length === 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <Card className="card-base p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Download className="w-8 h-8 text-primary dark:text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground dark:text-foreground mb-2">No predictions yet</h3>
-              <p className="text-muted-foreground dark:text-muted-foreground">
-                {modelFilter
-                  ? "No predictions found for this model"
-                  : "Start making predictions with your models to see history here"}
-              </p>
-            </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4 }}
+        >
+          <Card className="card-base p-12 text-center max-w-lg mx-auto">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+              className="w-20 h-20 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 rounded-2xl flex items-center justify-center mx-auto mb-6 relative"
+            >
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    "0 0 0 0 rgba(var(--primary-rgb, 79 70 229), 0)",
+                    "0 0 0 10px rgba(var(--primary-rgb, 79 70 229), 0)",
+                  ],
+                }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute inset-0 rounded-2xl"
+              />
+              <TrendingUp className="w-10 h-10 text-primary" strokeWidth={2} />
+            </motion.div>
+            <motion.h3
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-2xl font-semibold text-foreground mb-3"
+            >
+              No predictions yet
+            </motion.h3>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-muted-foreground"
+            >
+              {modelFilter
+                ? "No predictions found for this model. Try selecting a different model or clear the filter."
+                : "Start making predictions with your models to see history here. Use the API or upload data to get started."}
+            </motion.p>
           </Card>
         </motion.div>
       )}

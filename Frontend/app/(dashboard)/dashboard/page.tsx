@@ -5,10 +5,11 @@ import { StatsCard } from "@/components/dashboard/stats-card"
 import { PredictionsChart } from "@/components/dashboard/predictions-chart"
 import { ModelsChart } from "@/components/dashboard/models-chart"
 import { RecentActivity } from "@/components/dashboard/recent-activity"
-import { Zap, TrendingUp, Key, Gauge, Loader2 } from 'lucide-react'
+import { Zap, TrendingUp, Key, Gauge } from 'lucide-react'
 import { useState, useEffect } from "react"
 import { api } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
+import { StatCardSkeleton } from "@/components/loading-skeleton"
 
 interface DashboardStats {
   totalModels: number
@@ -177,8 +178,17 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1, duration: 0.4 }}
+            >
+              <StatCardSkeleton />
+            </motion.div>
+          ))}
         </div>
       ) : (
         <motion.div

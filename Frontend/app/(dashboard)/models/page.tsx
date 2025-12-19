@@ -1,14 +1,15 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Plus, MoreVertical, Loader2, RefreshCw } from "lucide-react"
+import { Plus, MoreVertical, RefreshCw, Zap, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { api } from "@/lib/api-client"
 import { useToast } from "@/hooks/use-toast"
+import { CardSkeleton } from "@/components/loading-skeleton"
 
 interface Model {
   id: string
@@ -137,9 +138,22 @@ export default function ModelsPage() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.08, duration: 0.4 }}
+            >
+              <CardSkeleton />
+            </motion.div>
+          ))}
+        </motion.div>
       )}
 
       {/* Empty State */}
@@ -147,24 +161,58 @@ export default function ModelsPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center py-12"
+          transition={{ duration: 0.4 }}
+          className="text-center py-16"
         >
-          <Card className="card-base p-12">
-            <div className="max-w-md mx-auto">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-foreground mb-2">No models yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Get started by uploading your first ML model
-              </p>
+          <Card className="card-base p-12 max-w-lg mx-auto">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+              className="w-20 h-20 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/20 rounded-2xl flex items-center justify-center mx-auto mb-6 relative"
+            >
+              <motion.div
+                animate={{
+                  boxShadow: [
+                    "0 0 0 0 rgba(var(--primary-rgb, 79 70 229), 0)",
+                    "0 0 0 10px rgba(var(--primary-rgb, 79 70 229), 0)",
+                  ],
+                }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="absolute inset-0 rounded-2xl"
+              />
+              <Zap className="w-10 h-10 text-primary" strokeWidth={2} />
+            </motion.div>
+            <motion.h3
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-2xl font-semibold text-foreground mb-3"
+            >
+              No models yet
+            </motion.h3>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="text-muted-foreground mb-8 text-base"
+            >
+              Get started by uploading your first ML model and start making predictions
+            </motion.p>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
               <Link href="/models/upload">
-                <Button className="button-primary gap-2">
-                  <Plus className="w-4 h-4" />
-                  Upload Your First Model
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button className="button-primary gap-2 h-11 px-6">
+                    <Plus className="w-5 h-5" />
+                    Upload Your First Model
+                  </Button>
+                </motion.div>
               </Link>
-            </div>
+            </motion.div>
           </Card>
         </motion.div>
       )}
@@ -209,10 +257,10 @@ export default function ModelsPage() {
                       <span className="text-muted-foreground">Status</span>
                       <Badge
                         className={`${model.status === "active"
-                            ? "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/30"
-                            : model.status === "deprecated"
-                              ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/30"
-                              : "bg-gray-100 dark:bg-gray-500/20 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-500/30"
+                          ? "bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-500/30"
+                          : model.status === "deprecated"
+                            ? "bg-yellow-100 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/30"
+                            : "bg-gray-100 dark:bg-gray-500/20 text-gray-700 dark:text-gray-400 border border-gray-200 dark:border-gray-500/30"
                           }`}
                       >
                         {model.status.charAt(0).toUpperCase() + model.status.slice(1)}
