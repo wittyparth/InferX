@@ -7,7 +7,7 @@ import os
 import uuid as uuid_lib
 from typing import Optional
 
-from fastapi import (APIRouter, Depends, File, Form, HTTPException, UploadFile,
+from fastapi import (APIRouter, Depends, File, Form, HTTPException, Security, UploadFile,
                      status)
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
@@ -32,7 +32,7 @@ async def upload_model(
     name: str = Form(...),
     description: Optional[str] = Form(None),
     model_type: str = Form(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -117,7 +117,7 @@ async def list_models(
     page: int = 1,
     per_page: int = 20,
     status_filter: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -168,7 +168,7 @@ async def list_models(
 @router.get("/{model_id}", response_model=dict)
 async def get_model(
     model_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -208,7 +208,7 @@ async def get_model(
 async def update_model(
     model_id: str,
     model_update: ModelUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -257,7 +257,7 @@ async def update_model(
 @router.delete("/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_model(
     model_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -293,7 +293,7 @@ async def delete_model(
 async def get_model_analytics(
     model_id: str,
     days: int = 7,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """

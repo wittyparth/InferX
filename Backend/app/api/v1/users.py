@@ -3,7 +3,7 @@ User management endpoints
 Handles user profile operations
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -15,7 +15,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get("/me", response_model=dict)
-async def get_current_user_profile(current_user: User = Depends(get_current_user)):
+async def get_current_user_profile(current_user: User = Security(get_current_user)):
     """
     Get current user profile
 
@@ -29,7 +29,7 @@ async def get_current_user_profile(current_user: User = Depends(get_current_user
 @router.patch("/me", response_model=dict)
 async def update_current_user(
     user_update: UserUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """

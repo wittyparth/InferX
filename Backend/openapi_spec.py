@@ -161,7 +161,6 @@ All responses follow this format:
 
     # Add server information
     openapi_schema["servers"] = [
-        {"url": "https://api.example.com", "description": "Production server"},
         {"url": "http://localhost:8000", "description": "Local development server"},
     ]
 
@@ -171,18 +170,52 @@ All responses follow this format:
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
-            "description": "JWT access token obtained from /auth/login",
+            "description": "Enter your JWT access token from /api/v1/auth/login (just the token, without 'Bearer')",
         },
         "ApiKey": {
             "type": "apiKey",
             "in": "header",
             "name": "X-API-Key",
-            "description": "API key from /api_keys/create",
+            "description": "Enter your API key from /api/v1/api-keys endpoint",
         },
     }
 
-    # Add global security requirement
-    openapi_schema["security"] = [{"BearerToken": []}, {"ApiKey": []}]
+    # Define public endpoints that DON'T require authentication
+    public_endpoints = {
+        "/api/v1/auth/register",
+        "/api/v1/auth/login",
+        "/api/v1/health",
+        "/api/v1/health/ready",
+        "/api/v1/health/live",
+    }
+    
+    # OAuth endpoints (also public)
+    oauth_patterns = ["/api/v1/auth/oauth"]
+    
+    # Add security requirements to ALL endpoints except public ones
+    # This ensures Swagger shows the lock icon and includes auth headers
+    for path, path_item in openapi_schema.get("paths", {}).items():
+        for method, operation in path_item.items():
+            if method in ["get", "post", "put", "patch", "delete", "options"]:
+                # Check if this is a public endpoint
+                is_public = path in public_endpoints or any(path.startswith(pattern) for pattern in oauth_patterns)
+                
+                if not is_public:
+                    # Add security requirement - user can authenticate with EITHER Bearer token OR API key
+                    operation["security"] = [
+                        {"BearerToken": []},  # Option 1: Bearer token
+                        {"ApiKey": []}        # Option 2: API key
+                    ]
+                    
+                    # Add security description to the endpoint documentation
+                    if "description" in operation:
+                        if "🔒 **Authentication Required**" not in operation["description"]:
+                            operation["description"] = (
+                                f"🔒 **Authentication Required**: Use Bearer token OR X-API-Key header\n\n"
+                                f"{operation['description']}"
+                            )
+                    else:
+                        operation["description"] = "🔒 **Authentication Required**: Use Bearer token OR X-API-Key header"
 
     # Add common responses
     openapi_schema["components"]["responses"] = {

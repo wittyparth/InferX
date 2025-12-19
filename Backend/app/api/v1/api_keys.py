@@ -2,7 +2,8 @@
 API Key management endpoints
 Handles creation, listing, and revocation of API keys
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 import secrets
@@ -16,7 +17,7 @@ from app.schemas.api_key import (
     APIKeyResponse,
     APIKeyUpdate
 )
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, bearer_scheme
 
 router = APIRouter(prefix="/api-keys", tags=["API Keys"])
 
@@ -34,8 +35,8 @@ def hash_api_key(api_key: str) -> str:
 @router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_api_key(
     key_data: APIKeyCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user: User = Security(get_current_user),
+    db: Session = Depends(get_db),
 ):
     """
     Create a new API key
@@ -43,7 +44,7 @@ async def create_api_key(
     - **name**: User-friendly name for the key
     - **expires_days**: Optional expiration in days (default: never)
     
-    Requires authentication
+    Requires authentication (Bearer token OR X-API-Key)
     
     **Important:** The API key is only shown once! Save it securely.
     """
@@ -81,10 +82,9 @@ async def create_api_key(
         }
     }
 
-
 @router.get("", response_model=dict)
 async def list_api_keys(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -117,7 +117,7 @@ async def list_api_keys(
 @router.get("/{key_id}", response_model=dict)
 async def get_api_key(
     key_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -151,7 +151,7 @@ async def get_api_key(
 async def update_api_key(
     key_id: str,
     key_update: APIKeyUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -196,7 +196,7 @@ async def update_api_key(
 @router.delete("/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_api_key(
     key_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db)
 ):
     """

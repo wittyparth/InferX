@@ -7,8 +7,8 @@ import hashlib
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import Depends, Header, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import Depends, HTTPException, Security, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer, APIKeyHeader
 from sqlalchemy.orm import Session
 
 from app.core.security import verify_token
@@ -16,8 +16,9 @@ from app.db.session import get_db
 from app.models.api_key import APIKey
 from app.models.user import User
 
-# Security scheme for JWT Bearer tokens (auto_error=False to allow API key auth)
-security = HTTPBearer(auto_error=False)
+# Security schemes for Swagger UI
+bearer_scheme = HTTPBearer(auto_error=False)
+api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def hash_api_key(api_key: str) -> str:
@@ -26,23 +27,24 @@ def hash_api_key(api_key: str) -> str:
 
 
 async def get_user_from_api_key(
-    x_api_key: Optional[str] = Header(None), db: Session = Depends(get_db)
+    api_key: Optional[str] = Security(api_key_scheme), 
+    db: Session = Depends(get_db)
 ) -> Optional[User]:
     """
     Get user from API key header
 
     Args:
-        x_api_key: API key from X-API-Key header
+        api_key: API key from X-API-Key header (via Security scheme)
         db: Database session
 
     Returns:
         User object if valid API key, None otherwise
     """
-    if not x_api_key:
+    if not api_key:
         return None
 
     # Hash the API key
-    key_hash = hash_api_key(x_api_key)
+    key_hash = hash_api_key(api_key)
 
     # Look up API key in database
     api_key_record = (
@@ -71,17 +73,17 @@ async def get_user_from_api_key(
 
 async def get_current_user(
     db: Session = Depends(get_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
-    x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    bearer_token: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme),
+    api_key: Optional[str] = Security(api_key_scheme),
 ) -> User:
     """
     Dependency to get the current authenticated user
 
-    Supports both JWT tokens and API keys
+    Supports both JWT tokens (Bearer) and API keys
 
     Args:
-        credentials: JWT token from Authorization header
-        x_api_key: API key from X-API-Key header
+        bearer_token: JWT token from Authorization header (via Security)
+        api_key: API key from X-API-Key header (via Security)
         db: Database session
 
     Returns:
@@ -95,9 +97,35 @@ async def get_current_user(
         async def protected_route(current_user: User = Depends(get_current_user)):
             return {"user_id": current_user.id}
     """
-    # Try API key first
-    if x_api_key:
-        user = await get_user_from_api_key(x_api_key, db)
+    # Try Bearer token first (most common for web/Swagger)
+    if bearer_token:
+        # Verify and decode token
+        payload = verify_token(bearer_token.credentials, token_type="access")
+        user_id = payload.get("user_id")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
+            )
+
+        # Get user from database
+        user = db.query(User).filter(User.id == user_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
+            )
+
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
+            )
+
+        return user
+    
+    # Try API key if no bearer token
+    if api_key:
+        user = await get_user_from_api_key(api_key, db)
         if user:
             if not user.is_active:
                 raise HTTPException(
@@ -111,36 +139,11 @@ async def get_current_user(
                 detail="Invalid or expired API key",
             )
 
-    # Try JWT token
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated. Provide either Bearer token or X-API-Key header.",
-        )
-
-    # Verify and decode token
-    payload = verify_token(credentials.credentials, token_type="access")
-    user_id = payload.get("user_id")
-
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload"
-        )
-
-    # Get user from database
-    user = db.query(User).filter(User.id == user_id).first()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
-        )
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive"
-        )
-
-    return user
+    # No authentication provided
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated. Provide either Bearer token or X-API-Key header.",
+    )
 
 
 async def get_current_active_user(

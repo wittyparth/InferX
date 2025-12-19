@@ -25,31 +25,31 @@ from app.db.base import Base
 from app.db.session import engine
 from openapi_spec import get_openapi_schema
 
-# Setup logging
-setup_logging()
+# Let uvicorn handle logging naturally
+# setup_logging()
 logger = get_logger(__name__)
 
 # Initialize Sentry (if configured)
-if settings.SENTRY_DSN:
-    sentry_sdk.init(
-        dsn=settings.SENTRY_DSN,
-        environment=settings.SENTRY_ENVIRONMENT or settings.ENVIRONMENT,
-        traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
-        integrations=[
-            FastApiIntegration(transaction_style="endpoint"),
-            SqlalchemyIntegration(),
-        ],
-        # Performance monitoring
-        enable_tracing=True,
-        # Release tracking (optional)
-        release=f"{settings.PROJECT_NAME}@{settings.VERSION}",
-        # Additional options
-        attach_stacktrace=True,
-        send_default_pii=False,  # Don't send personally identifiable information
-    )
-    logger.info(f"Sentry initialized for {settings.ENVIRONMENT} environment")
-else:
-    logger.info("Sentry not configured (SENTRY_DSN not set)")
+# if settings.SENTRY_DSN:
+#     sentry_sdk.init(
+#         dsn=settings.SENTRY_DSN,
+#         environment=settings.SENTRY_ENVIRONMENT or settings.ENVIRONMENT,
+#         traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+#         integrations=[
+#             FastApiIntegration(transaction_style="endpoint"),
+#             SqlalchemyIntegration(),
+#         ],
+#         # Performance monitoring
+#         enable_tracing=True,
+#         # Release tracking (optional)
+#         release=f"{settings.PROJECT_NAME}@{settings.VERSION}",
+#         # Additional options
+#         attach_stacktrace=True,
+#         send_default_pii=False,  # Don't send personally identifiable information
+#     )
+#     logger.info(f"Sentry initialized for {settings.ENVIRONMENT} environment")
+# else:
+#     logger.info("Sentry not configured (SENTRY_DSN not set)")
 
 # Create FastAPI app
 app = FastAPI(
@@ -62,7 +62,13 @@ app = FastAPI(
     # lifespan=lifespan
 )
 
-# CORS middleware
+# Add custom middleware first (reverse order - last added runs first)
+app.add_middleware(RateLimitHeaderMiddleware)
+app.add_middleware(RequestLoggingMiddleware)
+app.add_middleware(PerformanceMonitoringMiddleware, slow_threshold_ms=1000)
+app.add_middleware(ErrorTrackingMiddleware)
+
+# CORS middleware (must be added early to handle OPTIONS requests)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.BACKEND_CORS_ORIGINS,
@@ -71,7 +77,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Session middleware (required for OAuth)
+# Session middleware (required for OAuth) - after CORS
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SECRET_KEY,
@@ -80,12 +86,6 @@ app.add_middleware(
     same_site="lax",
     https_only=False  # Set to True in production with HTTPS
 )
-
-# Add custom middleware (order matters!)
-app.add_middleware(ErrorTrackingMiddleware)
-app.add_middleware(PerformanceMonitoringMiddleware, slow_threshold_ms=1000)
-app.add_middleware(RequestLoggingMiddleware)
-app.add_middleware(RateLimitHeaderMiddleware)
 
 
 # Configure OpenAPI schema

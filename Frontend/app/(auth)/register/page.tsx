@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { Github, ArrowRight, Eye, EyeOff, Zap, Check, Sparkles, Rocket, Shield } from "lucide-react"
+import { Github, ArrowRight, Eye, EyeOff, Check, Sparkles, Rocket, Shield } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function RegisterPage() {
@@ -86,9 +87,13 @@ export default function RegisterPage() {
         <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <Zap className="w-5 h-5" strokeWidth={2.5} />
-            </div>
+            <Image
+              src="/logo-dark.png"
+              alt="InferX Logo"
+              width={40}
+              height={40}
+              className="rounded-xl"
+            />
             <span className="font-bold text-xl">InferX</span>
           </Link>
 
@@ -147,8 +152,19 @@ export default function RegisterPage() {
         {/* Header */}
         <div className="flex items-center justify-between p-6">
           <Link href="/" className="lg:hidden flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2.5} />
+            <div className="relative w-8 h-8">
+              <Image
+                src="/logo-light.png"
+                alt="InferX Logo"
+                fill
+                className="rounded-lg object-contain dark:hidden"
+              />
+              <Image
+                src="/logo-dark.png"
+                alt="InferX Logo"
+                fill
+                className="rounded-lg object-contain hidden dark:block"
+              />
             </div>
             <span className="font-semibold text-foreground">InferX</span>
           </Link>

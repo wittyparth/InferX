@@ -12,8 +12,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-# Configure structured logging
-logging.basicConfig(level=logging.INFO, format="%(message)s")
+# Get logger instance
 logger = logging.getLogger(__name__)
 
 
@@ -50,41 +49,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         client_host = request.client.host if request.client else "unknown"
 
-        # Log request
-        logger.info(
-            json.dumps(
-                {
-                    "event": "request_started",
-                    "request_id": request_id,
-                    "method": method,
-                    "path": path,
-                    "client": client_host,
-                    "timestamp": time.time(),
-                }
-            )
-        )
-
         # Process request
         try:
             response = await call_next(request)
 
             # Calculate duration
             duration_ms = (time.time() - start_time) * 1000
-
-            # Log response
-            logger.info(
-                json.dumps(
-                    {
-                        "event": "request_completed",
-                        "request_id": request_id,
-                        "method": method,
-                        "path": path,
-                        "status_code": response.status_code,
-                        "duration_ms": round(duration_ms, 2),
-                        "timestamp": time.time(),
-                    }
-                )
-            )
 
             # Add custom headers
             response.headers["X-Request-ID"] = request_id

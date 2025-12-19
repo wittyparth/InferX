@@ -1,51 +1,70 @@
 """
 Logging configuration
-Structured JSON logging for production
+Colored text logging for readability
 """
 
-import json
 import logging
 import sys
 from datetime import datetime
 from typing import Any, Dict
 
 
-class JSONFormatter(logging.Formatter):
-    """Custom JSON formatter for structured logging"""
+class ColoredFormatter(logging.Formatter):
+    """Custom colored formatter for readable terminal logging"""
+
+    # ANSI color codes
+    COLORS = {
+        "DEBUG": "\033[36m",      # Cyan
+        "INFO": "\033[32m",       # Green
+        "WARNING": "\033[33m",    # Yellow
+        "ERROR": "\033[31m",      # Red
+        "CRITICAL": "\033[35m",   # Magenta
+    }
+    RESET = "\033[0m"
+    BOLD = "\033[1m"
 
     def format(self, record: logging.LogRecord) -> str:
         """
-        Format log record as JSON
+        Format log record with colors and readable text
 
         Args:
             record: Log record to format
 
         Returns:
-            JSON formatted log string
+            Colored formatted log string
         """
-        log_data: Dict[str, Any] = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-            "module": record.module,
-            "function": record.funcName,
-            "line": record.lineno,
-        }
+        # Get color for log level
+        level_color = self.COLORS.get(record.levelname, self.RESET)
+        
+        # Format timestamp
+        timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Build the log message
+        log_message = (
+            f"{level_color}{self.BOLD}[{timestamp}]{self.RESET} "
+            f"{level_color}{record.levelname:8}{self.RESET} "
+            f"{self.BOLD}{record.name}{self.RESET} "
+            f"({record.module}:{record.funcName}:{record.lineno}) "
+            f"- {record.getMessage()}"
+        )
 
         # Add exception info if present
         if record.exc_info:
-            log_data["exception"] = self.formatException(record.exc_info)
+            log_message += f"\n{self.formatException(record.exc_info)}"
 
-        # Add extra fields
+        # Add extra fields if present
+        extra_fields = []
         if hasattr(record, "user_id"):
-            log_data["user_id"] = record.user_id
+            extra_fields.append(f"user_id={record.user_id}")
         if hasattr(record, "model_id"):
-            log_data["model_id"] = record.model_id
+            extra_fields.append(f"model_id={record.model_id}")
         if hasattr(record, "request_id"):
-            log_data["request_id"] = record.request_id
+            extra_fields.append(f"request_id={record.request_id}")
+        
+        if extra_fields:
+            log_message += f" [{', '.join(extra_fields)}]"
 
-        return json.dumps(log_data)
+        return log_message
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -55,17 +74,27 @@ def setup_logging(log_level: str = "INFO") -> None:
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
+    # Get root logger
+    root_logger = logging.getLogger()
+    
+    # Clear any existing handlers
+    root_logger.handlers = []
+    
     # Create handler
     handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(JSONFormatter())
-
-    # Configure root logger
-    root_logger = logging.getLogger()
+    handler.setFormatter(ColoredFormatter())
+    
+    # Set logging level
     root_logger.setLevel(getattr(logging, log_level.upper()))
+    
+    # Add handler to root logger
     root_logger.addHandler(handler)
 
-    # Disable uvicorn access logs in JSON format
+    # Disable middleware and access logs
     logging.getLogger("uvicorn.access").handlers = []
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("app.core.middleware").setLevel(logging.WARNING)
 
 
 def get_logger(name: str) -> logging.Logger:

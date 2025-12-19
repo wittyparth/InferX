@@ -4,7 +4,7 @@ Handles sharing models between users
 """
 
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/models", tags=["Model Sharing"])
 async def share_model(
     model_id: str,
     share_request: ModelShareCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -106,7 +106,7 @@ async def share_model(
 @router.get("/{model_id}/shares", response_model=dict)
 async def list_model_shares(
     model_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -157,7 +157,7 @@ async def update_model_share(
     model_id: str,
     share_id: str,
     update_request: ModelShareUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -211,7 +211,7 @@ async def update_model_share(
 async def delete_model_share(
     model_id: str,
     share_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -258,7 +258,7 @@ async def delete_model_share(
 async def list_shared_models(
     page: int = 1,
     per_page: int = 20,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """

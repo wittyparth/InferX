@@ -8,7 +8,7 @@ import hmac
 from datetime import datetime
 
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Security, status
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
@@ -61,7 +61,7 @@ async def dispatch_webhook(webhook: Webhook, event: WebhookEvent):
 @router.post("", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def create_webhook(
     webhook_create: WebhookCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -138,7 +138,7 @@ async def create_webhook(
 async def list_webhooks(
     page: int = 1,
     per_page: int = 20,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -175,7 +175,7 @@ async def list_webhooks(
 @router.get("/{webhook_id}", response_model=dict)
 async def get_webhook(
     webhook_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -203,7 +203,7 @@ async def get_webhook(
 async def update_webhook(
     webhook_id: str,
     update_request: WebhookUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -251,7 +251,7 @@ async def update_webhook(
 @router.delete("/{webhook_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_webhook(
     webhook_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -283,7 +283,7 @@ async def test_webhook(
     webhook_id: str,
     test_request: WebhookTestRequest,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """

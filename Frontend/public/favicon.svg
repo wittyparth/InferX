@@ -1,0 +1,17 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="xGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366F1"></stop>
+      <stop offset="100%" stop-color="#8B5CF6"></stop>
+    </linearGradient>
+  </defs>
+
+  <!-- Optional background for dark mode -->
+  <rect width="256" height="256" rx="56" fill="#0B0F19"></rect>
+
+  <!-- Bold X -->
+  <path d="M72 48 L128 104 L184 48 L208 72 L152 128 L208 184 L184 208 L128 152 L72 208 L48 184 L104 128 L48 72 Z" fill="url(#xGradient)"></path>
+
+  <!-- Lightning cut -->
+  <path d="M132 64 L112 128 H132 L124 192 L156 120 H136 Z" fill="#FFFFFF"></path>
+</svg>

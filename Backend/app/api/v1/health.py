@@ -7,7 +7,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Security, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 

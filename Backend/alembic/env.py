@@ -14,6 +14,12 @@ from app.core.config import settings
 from app.db.base import Base
 
 # Import all models so Alembic can detect them
+from app.models.user import User
+from app.models.model import Model
+from app.models.prediction import Prediction
+from app.models.api_key import APIKey
+from app.models.webhook import Webhook
+from app.models.model_share import ModelShare
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

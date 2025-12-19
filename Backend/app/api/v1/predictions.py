@@ -12,7 +12,7 @@ from typing import Any, Dict
 from uuid import UUID
 
 import numpy as np
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Security, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
@@ -64,7 +64,7 @@ async def predict(
     model_id: str,
     prediction_input: PredictionInput,
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
     loader: ModelLoader = Depends(get_model_loader),
 ):
@@ -114,16 +114,31 @@ async def predict(
 
         # Convert input to numpy array for sklearn models
         if model_record.model_type == "sklearn":
-            # Extract features as list (assume dict keys are feature names)
+            # Accept dict → single sample, list → single or batch
             if isinstance(input_data, dict):
-                # Try to get features in order
-                feature_values = list(input_data.values())
+                vals = list(input_data.values())
+                if len(vals) == 1 and isinstance(vals[0], (list, tuple, np.ndarray)):
+                    # Unwrap common payloads like {"features": [...]}
+                    inner = vals[0]
+                    if inner and all(isinstance(row, (list, tuple, np.ndarray)) for row in inner):
+                        # Batch inside the single key
+                        X = np.array(inner)
+                    else:
+                        X = np.array([list(inner)])
+                else:
+                    feature_values = vals
+                    X = np.array([feature_values])
             elif isinstance(input_data, list):
-                feature_values = input_data
+                # If already batch (list of lists/tuples), keep as-is; else wrap as single sample
+                if input_data and all(isinstance(row, (list, tuple)) for row in input_data):
+                    X = np.array(input_data)
+                else:
+                    X = np.array([input_data])
             else:
                 raise ValueError("Input must be a dict or list")
 
-            X = np.array([feature_values])
+            if X.ndim > 2:
+                raise ValueError("Input must be 1D feature list or 2D batch of samples")
 
             # Make prediction
             prediction = model.predict(X)
@@ -236,7 +251,7 @@ async def get_prediction_history(
     model_id: str = None,
     page: int = 1,
     per_page: int = 20,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
 ):
     """

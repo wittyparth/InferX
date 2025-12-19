@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Loader2, CheckCircle, XCircle, Zap, Sparkles, ArrowRight } from "lucide-react"
+import { Loader2, CheckCircle, XCircle, Sparkles, ArrowRight } from "lucide-react"
+import Image from "next/image"
 
 // Confetti pieces for success celebration
 const Confetti = () => {
@@ -64,8 +65,19 @@ function LoadingFallback() {
             <div className="relative w-full max-w-md">
                 <div className="relative bg-card/80 backdrop-blur-2xl border border-border/50 rounded-3xl p-10 shadow-2xl shadow-black/10 text-center">
                     <div className="flex items-center justify-center gap-2 mb-8">
-                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                            <Zap className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+                        <div className="relative w-10 h-10">
+                            <Image
+                                src="/logo-light.png"
+                                alt="InferX Logo"
+                                fill
+                                className="rounded-xl object-contain dark:hidden"
+                            />
+                            <Image
+                                src="/logo-dark.png"
+                                alt="InferX Logo"
+                                fill
+                                className="rounded-xl object-contain hidden dark:block"
+                            />
                         </div>
                         <span className="font-bold text-xl text-foreground">InferX</span>
                     </div>
@@ -189,8 +201,19 @@ function AuthCallbackContent() {
                         transition={{ delay: 0.1 }}
                         className="flex items-center justify-center gap-2 mb-8"
                     >
-                        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                            <Zap className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+                        <div className="relative w-10 h-10">
+                            <Image
+                                src="/logo-light.png"
+                                alt="InferX Logo"
+                                fill
+                                className="rounded-xl object-contain dark:hidden"
+                            />
+                            <Image
+                                src="/logo-dark.png"
+                                alt="InferX Logo"
+                                fill
+                                className="rounded-xl object-contain hidden dark:block"
+                            />
                         </div>
                         <span className="font-bold text-xl text-foreground">InferX</span>
                     </motion.div>

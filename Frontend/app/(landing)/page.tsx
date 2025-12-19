@@ -11,6 +11,7 @@ import {
     Activity, Lock, Globe, Sparkles
 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -206,11 +207,23 @@ export default function LandingPage() {
                 <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2.5">
                         <motion.div
-                            className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            <Zap className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+                            <div className="relative w-9 h-9">
+                                <Image
+                                    src="/logo-light.png"
+                                    alt="InferX Logo"
+                                    fill
+                                    className="rounded-xl object-contain dark:hidden"
+                                />
+                                <Image
+                                    src="/logo-dark.png"
+                                    alt="InferX Logo"
+                                    fill
+                                    className="rounded-xl object-contain hidden dark:block"
+                                />
+                            </div>
                         </motion.div>
                         <span className="font-bold text-lg text-foreground">InferX</span>
                     </Link>
@@ -408,7 +421,7 @@ export default function LandingPage() {
                                             >
                                                 <div className="flex items-center gap-2">
                                                     <div className={`w-2 h-2 rounded-full ${item.status === "active" ? "bg-green-500" :
-                                                            item.status === "deprecated" ? "bg-yellow-500" : "bg-muted-foreground"
+                                                        item.status === "deprecated" ? "bg-yellow-500" : "bg-muted-foreground"
                                                         }`} />
                                                     <span className="text-sm font-mono text-foreground">{item.version}</span>
                                                 </div>
@@ -659,8 +672,19 @@ export default function LandingPage() {
                 <div className="max-w-6xl mx-auto px-6 py-12">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <Link href="/" className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                                <Zap className="w-4 h-4 text-primary-foreground" strokeWidth={2.5} />
+                            <div className="relative w-8 h-8">
+                                <Image
+                                    src="/logo-light.png"
+                                    alt="InferX Logo"
+                                    fill
+                                    className="rounded-lg object-contain dark:hidden"
+                                />
+                                <Image
+                                    src="/logo-dark.png"
+                                    alt="InferX Logo"
+                                    fill
+                                    className="rounded-lg object-contain hidden dark:block"
+                                />
                             </div>
                             <span className="font-semibold text-foreground">InferX</span>
                         </Link>

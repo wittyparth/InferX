@@ -5,8 +5,9 @@ Handles user registration, login, token refresh, and OAuth
 
 from datetime import timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Security, status
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from starlette.requests import Request as StarletteRequest
 
@@ -106,8 +107,11 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
     }
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
 @router.post("/refresh", response_model=dict)
-async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
+async def refresh_access_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
     """
     Refresh access token using refresh token
 
@@ -116,7 +120,7 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
     Returns new access token
     """
     # Verify refresh token
-    payload = verify_token(refresh_token, token_type="refresh")
+    payload = verify_token(request.refresh_token, token_type="refresh")
     user_id = payload.get("user_id")
 
     if not user_id:
@@ -130,10 +134,14 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
 
+    # Also create a new refresh token (rotate tokens for security)
+    new_refresh_token = create_refresh_token(data={"user_id": user_id})
+
     return {
         "success": True,
         "data": {
             "access_token": access_token,
+            "refresh_token": new_refresh_token,
             "token_type": "bearer",
             "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         },
@@ -141,7 +149,7 @@ async def refresh_token(refresh_token: str, db: Session = Depends(get_db)):
 
 
 @router.get("/me", response_model=dict)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
+async def get_current_user_info(current_user: User = Security(get_current_user)):
     """
     Get current user information
 
@@ -149,6 +157,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 
     Returns user profile information
     """
+    logger.info(f"User {current_user.email} accessed /me endpoint")
     return {"success": True, "data": UserResponse.model_validate(current_user)}
 
 
@@ -169,7 +178,7 @@ async def oauth_login(provider: str, request: Request, db: Session = Depends(get
         oauth_client = oauth_service.get_provider(provider)
 
         # Generate redirect URI for callback - must point to backend
-        redirect_uri = f"http://localhost:8000{settings.API_V1_PREFIX}/auth/oauth/{provider}/callback"
+        redirect_uri = f"{settings.BACKEND_URL}{settings.API_V1_PREFIX}/auth/oauth/{provider}/callback"
 
         logger.info(f"Starting OAuth flow for {provider}, redirect_uri: {redirect_uri}")
 

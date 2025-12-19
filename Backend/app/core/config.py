@@ -38,6 +38,9 @@ class Settings(BaseSettings):
 
     # Frontend URL for OAuth redirects
     FRONTEND_URL: str = "http://localhost:3000"
+    
+    # Backend URL for OAuth callback
+    BACKEND_URL: str = "http://localhost:8000"
 
     # Database
     DATABASE_URL: str = "postgresql://user:password@localhost:5432/mlplatform"
@@ -53,7 +56,12 @@ class Settings(BaseSettings):
     CACHE_TTL_SECONDS: int = 3600  # 1 hour
 
     # CORS
-    BACKEND_CORS_ORIGINS: list[str] | str = ["http://localhost:3000", "http://localhost:8000"]
+    BACKEND_CORS_ORIGINS: list[str] | str = [
+        "http://localhost:3000", 
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000"
+    ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
