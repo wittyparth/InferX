@@ -18,6 +18,10 @@ from app.schemas.api_key import (
     APIKeyUpdate
 )
 from app.api.dependencies import get_current_user, bearer_scheme
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import (
+    API_KEYS_CREATE, API_KEYS_LIST, API_KEYS_GET, API_KEYS_UPDATE, API_KEYS_REVOKE
+)
 
 router = APIRouter(prefix="/api-keys", tags=["API Keys"])
 
@@ -37,6 +41,7 @@ async def create_api_key(
     key_data: APIKeyCreate,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(API_KEYS_CREATE)),
 ):
     """
     Create a new API key
@@ -85,7 +90,8 @@ async def create_api_key(
 @router.get("", response_model=dict)
 async def list_api_keys(
     current_user: User = Security(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(API_KEYS_LIST)),
 ):
     """
     List all API keys for the current user
@@ -118,7 +124,8 @@ async def list_api_keys(
 async def get_api_key(
     key_id: str,
     current_user: User = Security(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(API_KEYS_GET)),
 ):
     """
     Get API key details
@@ -152,7 +159,8 @@ async def update_api_key(
     key_id: str,
     key_update: APIKeyUpdate,
     current_user: User = Security(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(API_KEYS_UPDATE)),
 ):
     """
     Update API key (name or active status)
@@ -197,7 +205,8 @@ async def update_api_key(
 async def revoke_api_key(
     key_id: str,
     current_user: User = Security(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(API_KEYS_REVOKE)),
 ):
     """
     Revoke (delete) an API key

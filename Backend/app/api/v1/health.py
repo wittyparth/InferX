@@ -12,13 +12,18 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import HEALTH_CHECK
 from app.db.session import get_db
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
 @router.get("")
-async def health_check(db: Session = Depends(get_db)):
+async def health_check(
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(HEALTH_CHECK)),
+):
     """
     Comprehensive health check endpoint
 
@@ -91,7 +96,10 @@ async def health_check(db: Session = Depends(get_db)):
 
 
 @router.get("/ready")
-async def readiness_check(db: Session = Depends(get_db)):
+async def readiness_check(
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(HEALTH_CHECK)),
+):
     """
     Kubernetes readiness probe endpoint
 
@@ -109,7 +117,9 @@ async def readiness_check(db: Session = Depends(get_db)):
 
 
 @router.get("/live")
-async def liveness_check():
+async def liveness_check(
+    _rate_limit: None = Depends(rate_limit(HEALTH_CHECK)),
+):
     """
     Kubernetes liveness probe endpoint
 

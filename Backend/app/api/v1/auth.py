@@ -14,6 +14,10 @@ from starlette.requests import Request as StarletteRequest
 from app.api.dependencies import get_current_user
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import (
+    AUTH_REGISTER, AUTH_LOGIN, AUTH_REFRESH, AUTH_ME, AUTH_OAUTH
+)
 from app.core.security import (create_access_token, create_refresh_token,
                                get_password_hash, verify_password,
                                verify_token)
@@ -28,7 +32,11 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(
+    user_data: UserCreate,
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(AUTH_REGISTER)),
+):
     """
     Register a new user
 
@@ -64,7 +72,11 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=dict)
-async def login(credentials: UserLogin, db: Session = Depends(get_db)):
+async def login(
+    credentials: UserLogin,
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(AUTH_LOGIN)),
+):
     """
     Login with email and password
 
@@ -111,7 +123,11 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
 @router.post("/refresh", response_model=dict)
-async def refresh_access_token(request: RefreshTokenRequest, db: Session = Depends(get_db)):
+async def refresh_access_token(
+    request: RefreshTokenRequest,
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(AUTH_REFRESH)),
+):
     """
     Refresh access token using refresh token
 
@@ -149,7 +165,10 @@ async def refresh_access_token(request: RefreshTokenRequest, db: Session = Depen
 
 
 @router.get("/me", response_model=dict)
-async def get_current_user_info(current_user: User = Security(get_current_user)):
+async def get_current_user_info(
+    current_user: User = Security(get_current_user),
+    _rate_limit: None = Depends(rate_limit(AUTH_ME)),
+):
     """
     Get current user information
 
@@ -165,7 +184,12 @@ async def get_current_user_info(current_user: User = Security(get_current_user))
 
 
 @router.get("/oauth/{provider}", response_model=None)
-async def oauth_login(provider: str, request: Request, db: Session = Depends(get_db)):
+async def oauth_login(
+    provider: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(AUTH_OAUTH)),
+):
     """
     Initiate OAuth login flow
 
@@ -200,7 +224,10 @@ async def oauth_login(provider: str, request: Request, db: Session = Depends(get
 
 @router.get("/oauth/{provider}/callback", response_model=None)
 async def oauth_callback(
-    provider: str, request: Request, db: Session = Depends(get_db)
+    provider: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(AUTH_OAUTH)),
 ):
     """
     OAuth callback endpoint

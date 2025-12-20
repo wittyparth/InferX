@@ -9,6 +9,10 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import (
+    SHARING_CREATE, SHARING_LIST, SHARING_UPDATE, SHARING_DELETE, SHARED_WITH_ME
+)
 from app.db.session import get_db
 from app.models.model import Model
 from app.models.model_share import ModelShare
@@ -27,6 +31,7 @@ async def share_model(
     share_request: ModelShareCreate,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(SHARING_CREATE)),
 ):
     """
     Share a model with another user
@@ -108,6 +113,7 @@ async def list_model_shares(
     model_id: str,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(SHARING_LIST)),
 ):
     """
     List users this model is shared with
@@ -159,6 +165,7 @@ async def update_model_share(
     update_request: ModelShareUpdate,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(SHARING_UPDATE)),
 ):
     """
     Update share permissions
@@ -213,6 +220,7 @@ async def delete_model_share(
     share_id: str,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(SHARING_DELETE)),
 ):
     """
     Revoke model share
@@ -260,6 +268,7 @@ async def list_shared_models(
     per_page: int = 20,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(SHARED_WITH_ME)),
 ):
     """
     List models shared with the current user

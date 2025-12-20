@@ -13,6 +13,10 @@ from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import (
+    WEBHOOKS_CREATE, WEBHOOKS_LIST, WEBHOOKS_GET, WEBHOOKS_UPDATE, WEBHOOKS_DELETE, WEBHOOKS_TEST
+)
 from app.db.session import get_db
 from app.models.model import Model
 from app.models.user import User
@@ -63,6 +67,7 @@ async def create_webhook(
     webhook_create: WebhookCreate,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(WEBHOOKS_CREATE)),
 ):
     """
     Create a new webhook
@@ -140,6 +145,7 @@ async def list_webhooks(
     per_page: int = 20,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(WEBHOOKS_LIST)),
 ):
     """
     List user's webhooks
@@ -177,6 +183,7 @@ async def get_webhook(
     webhook_id: str,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(WEBHOOKS_GET)),
 ):
     """
     Get webhook details
@@ -205,6 +212,7 @@ async def update_webhook(
     update_request: WebhookUpdate,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(WEBHOOKS_UPDATE)),
 ):
     """
     Update webhook configuration
@@ -253,6 +261,7 @@ async def delete_webhook(
     webhook_id: str,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(WEBHOOKS_DELETE)),
 ):
     """
     Delete webhook
@@ -285,6 +294,7 @@ async def test_webhook(
     background_tasks: BackgroundTasks,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(WEBHOOKS_TEST)),
 ):
     """
     Test webhook with sample event

@@ -1,6 +1,6 @@
 """ 
 Prediction endpoints
-Handles real-time and batch predictions
+Handles real-time and batch predictions with Redis caching
 """
 
 import io
@@ -16,7 +16,10 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.core.caching import PredictionCache, get_cache
 from app.core.model_loader import ModelLoader, get_model_loader
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import PREDICT, PREDICT_HISTORY
 from app.core.webhook_service import trigger_webhooks
 from app.db.session import get_db
 from app.models.model import Model
@@ -67,6 +70,8 @@ async def predict(
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
     loader: ModelLoader = Depends(get_model_loader),
+    cache: PredictionCache = Depends(get_cache),
+    _rate_limit: None = Depends(rate_limit(PREDICT)),
 ):
     """
     Make a real-time prediction
@@ -78,8 +83,11 @@ async def predict(
     Requires authentication
 
     Returns prediction result with metadata
+    
+    **Performance:** Results are cached in Redis. Identical inputs return cached results instantly.
     """
     start_time = time.time()
+    cache_hit = False
 
     # Get model
     query = db.query(Model).filter(Model.id == model_id)
@@ -103,7 +111,38 @@ async def predict(
         )
 
     try:
-        # Load model using ModelLoader (handles caching + S3/local storage)
+        # ==================== CHECK CACHE FIRST ====================
+        cached_result = await cache.get_prediction(
+            model_id=str(model_record.id),
+            input_data=prediction_input.input,
+            version=model_record.version,
+        )
+        
+        if cached_result:
+            cache_hit = True
+            inference_time_ms = int((time.time() - start_time) * 1000)
+            
+            logger.info(f"Cache HIT for model {model_id} - returning cached prediction")
+            
+            return {
+                "success": True,
+                "data": {
+                    "prediction": cached_result,
+                    "metadata": {
+                        "model_id": str(model_record.id),
+                        "model_version": model_record.version,
+                        "inference_time_ms": inference_time_ms,
+                        "model_cached": loader.is_model_cached(str(model_record.id)),
+                        "prediction_cached": True,
+                    },
+                    "timestamp": datetime.utcnow().isoformat(),
+                },
+            }
+        
+        # ==================== CACHE MISS - RUN INFERENCE ====================
+        logger.info(f"Cache MISS for model {model_id} - running inference")
+        
+        # Load model using ModelLoader (handles model caching + S3/local storage)
         model = await loader.load_model(
             file_path=model_record.file_path,
             model_id=str(model_record.id)
@@ -170,6 +209,17 @@ async def predict(
         # Calculate inference time
         inference_time_ms = int((time.time() - start_time) * 1000)
 
+        # ==================== CACHE THE RESULT ====================
+        # Cache in background to not slow down response
+        background_tasks.add_task(
+            cache.set_prediction,
+            model_id=str(model_record.id),
+            input_data=prediction_input.input,
+            output_data=prediction_result,
+            version=model_record.version,
+            ttl=3600,  # 1 hour cache TTL
+        )
+
         # Log prediction to database asynchronously (non-blocking)
         background_tasks.add_task(
             log_prediction_to_db,
@@ -204,7 +254,8 @@ async def predict(
                     "model_id": str(model_record.id),
                     "model_version": model_record.version,
                     "inference_time_ms": inference_time_ms,
-                    "cached": loader.is_model_cached(str(model_record.id)),
+                    "model_cached": loader.is_model_cached(str(model_record.id)),
+                    "prediction_cached": False,
                 },
                 "timestamp": datetime.utcnow().isoformat(),
             },
@@ -253,6 +304,7 @@ async def get_prediction_history(
     per_page: int = 20,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(PREDICT_HISTORY)),
 ):
     """
     Get prediction history
@@ -330,3 +382,75 @@ async def get_prediction_history(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch prediction history: {str(e)}",
         )
+
+
+@router.get("/cache/stats", response_model=dict)
+async def get_cache_stats(
+    current_user: User = Security(get_current_user),
+    cache: PredictionCache = Depends(get_cache),
+):
+    """
+    Get prediction cache statistics.
+    
+    Shows hit rate, memory usage, and cache health.
+    
+    Requires authentication.
+    """
+    stats = await cache.get_cache_stats()
+    memory = await cache.get_memory_usage()
+    
+    return {
+        "success": True,
+        "data": {
+            "cache_stats": stats,
+            "memory_usage": memory,
+            "limits": {
+                "max_item_size_kb": 1024,  # 1MB per item
+                "recommended_total_mb": 200,  # Stay under 250MB
+            },
+        },
+    }
+
+
+@router.delete("/cache/{model_id}", response_model=dict)
+async def invalidate_model_cache(
+    model_id: str,
+    current_user: User = Security(get_current_user),
+    db: Session = Depends(get_db),
+    cache: PredictionCache = Depends(get_cache),
+):
+    """
+    Invalidate all cached predictions for a specific model.
+    
+    Use this when a model is updated or retrained.
+    
+    - **model_id**: Model UUID
+    
+    Requires authentication and model ownership.
+    """
+    # Verify model ownership
+    model = db.query(Model).filter(Model.id == model_id).first()
+    
+    if not model:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+    
+    if model.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to manage this model's cache",
+        )
+    
+    deleted_count = await cache.invalidate_model_cache(model_id)
+    
+    return {
+        "success": True,
+        "data": {
+            "model_id": model_id,
+            "deleted_cache_entries": deleted_count,
+        },
+        "message": f"Invalidated {deleted_count} cached predictions for model {model_id}",
+    }
+

@@ -14,6 +14,10 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.config import settings
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import (
+    MODELS_UPLOAD, MODELS_LIST, MODELS_GET, MODELS_UPDATE, MODELS_DELETE, MODELS_ANALYTICS
+)
 from app.db.session import get_db
 from app.models.model import Model
 from app.models.prediction import Prediction
@@ -34,6 +38,7 @@ async def upload_model(
     model_type: str = Form(...),
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(MODELS_UPLOAD)),
 ):
     """
     Upload a new ML model
@@ -119,6 +124,7 @@ async def list_models(
     status_filter: Optional[str] = None,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(MODELS_LIST)),
 ):
     """
     List user's models
@@ -170,6 +176,7 @@ async def get_model(
     model_id: str,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(MODELS_GET)),
 ):
     """
     Get model details
@@ -210,6 +217,7 @@ async def update_model(
     model_update: ModelUpdate,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(MODELS_UPDATE)),
 ):
     """
     Update model metadata
@@ -259,6 +267,7 @@ async def delete_model(
     model_id: str,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(MODELS_DELETE)),
 ):
     """
     Delete (archive) a model
@@ -295,6 +304,7 @@ async def get_model_analytics(
     days: int = 7,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(MODELS_ANALYTICS)),
 ):
     """
     Get model analytics and usage statistics

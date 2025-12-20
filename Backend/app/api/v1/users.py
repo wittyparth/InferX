@@ -7,6 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Security, status
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
+from app.core.rate_limiter import rate_limit
+from app.core.rate_limit_config import USERS_GET_ME, USERS_UPDATE_ME
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import UserResponse, UserUpdate
@@ -15,7 +17,10 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get("/me", response_model=dict)
-async def get_current_user_profile(current_user: User = Security(get_current_user)):
+async def get_current_user_profile(
+    current_user: User = Security(get_current_user),
+    _rate_limit: None = Depends(rate_limit(USERS_GET_ME)),
+):
     """
     Get current user profile
 
@@ -31,6 +36,7 @@ async def update_current_user(
     user_update: UserUpdate,
     current_user: User = Security(get_current_user),
     db: Session = Depends(get_db),
+    _rate_limit: None = Depends(rate_limit(USERS_UPDATE_ME)),
 ):
     """
     Update current user profile
